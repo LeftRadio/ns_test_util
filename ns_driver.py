@@ -114,6 +114,7 @@ class neilscope(object):
         self.read_data_len = 0
         self.write_respond = []
 
+
     # set log callback, log func must be of the form: ' def nlg(msg, lvl) '
     def set_log(self, log = nlg):
         self.log = log
@@ -121,15 +122,18 @@ class neilscope(object):
     def lg(self, msg, lvl = 'inf'):
         self.log('\'ns\' ' + msg, lvl)
 
+
     # get and verify vid/pid
     def vid_pid(self):
         vp = self.vidpid
         return ( not self.usbxpr.get_vidpid(0, vp) and vp[0] == 0x10C4 and vp[1] == 0x8693 )
 
+
     # configurate baudrate and timeouts for work with device
     def conf_si(self, rtout, wtout, baud = 921600):
         st = self.usbxpr.setbr(baud) | self.usbxpr.set_timeout(rtout, wtout)        
         return st
+
 
     # write command to device example: [0x5B, 0x00, 0x01, 0xFF]
     def write_cmd(self, cmd):
@@ -150,12 +154,16 @@ class neilscope(object):
             
             if not self.usbxpr.read(rd, ln_cm) and not ns_crc_buf(rd):
                 
-                if rd[1] == (cm[1] + 0x40) & 0xFF :
-                    self.lg('cmd ack recived')                    
+                # remove 'start' and 'crc' bytes
+                rd.remove(rd[-1])
+                rd.remove(rd[0])
+                if rd[0] == (cm[1] + 0x40) & 0xFF:  # if returned command byte = write command + 0x40
+                    self.lg('cmd ack recived')
                     return 0
                 else:
-                    if rd[3] > 3: rd[3] = 0x7F
-                    err_msg = 'error code: %s' % ns_err_list[rd[3]]                                     
+                    if rd[3] > 3: rd[3] = 0x7F  # if returned error code not recognize replace to 'NS3_ERROR'
+                    err_msg = 'error code: %s' % ns_err_list[rd[3]]
+
             else:                
                 err_msg = 'cmd ack error'
 
@@ -164,6 +172,7 @@ class neilscope(object):
 
         self.lg(err_msg, 'err')
         return 1
+
 
     # connect to device
     def connect(self):
@@ -192,6 +201,7 @@ class neilscope(object):
         
         return 1
 
+
     # disconnect from device
     def disconnect(self):
         st = self.write_cmd(ns_command['disconnect'])
@@ -202,23 +212,24 @@ class neilscope(object):
         self.usbxpr.close()
         return st
 
+
     # set oscilloscope or logic analyzer mode
     def mode(self, mode):
         ns_command['osc la mode'][-1] = ns_mode[mode]        
         return self.write_cmd(ns_command['osc la mode'])
 
+
     # set analog channels state
     def ach_state(self, param = ['AB', 'off']):
-        ch = param[0]
-        mode = param[1]
-        st = ns_ach[mode]       
+        st = ns_ach[param[1]]       
         
-        if ch == 'A': acm = [st, 0x03]
-        elif ch == 'B': acm = [0x03, st]
+        if param[0] == 'A': acm = [st, 0x03]
+        elif param[0] == 'B': acm = [0x03, st]
         else: acm = [st, st]
 
         ns_command['analog ch set'][-2:] = acm
         return self.write_cmd(ns_command['analog ch set'])
+
 
     # set analog divider
     def ach_div(self, param = ['AB', '50V']):
@@ -233,57 +244,66 @@ class neilscope(object):
         ns_command['analog div'][-2:] = div
         return self.write_cmd(ns_command['analog div'])
 
+
     # set syncronization mode
     def sync_mode(self, param = ['off']):
         ns_command['analog div'][-1] = ns_sync_mode[param[0]]
         return self.write_cmd(ns_command['analog div'])        
 
+
     # set syncronization sourse
     def sync_sourse(self, param = ['A']):
         ns_command['sync sourse'][-1] = ns_channels[param[0]]
         return self.write_cmd(ns_command['sync sourse'])
-    
+
+
     # set syncronization type
     def sync_type(self, param = ['rise']):
         ns_command['sync type'][-1] = ns_sync_type[param[0]]
         return self.write_cmd(ns_command['sync type'])
+
 
     # set trigger 'UP'
     def triggUP(self, param = [0x80]):
         ns_command['trig UP'][-1] = param[0]
         return self.write_cmd(ns_command['trig UP'])
 
+
     # set trigger 'DOWN'
     def triggDOWN(self, param = [0x80]):
         ns_command['trig DOWN'][-1] = param[0]
         return self.write_cmd(ns_command['trig DOWN'])
 
-     # set trigger X position
     
     # set trigger X position
     def triggX(self, param = [0x000001]):
         ns_command['trig X'][-3] = [ param[0]>>16, param[0]>>8, param[0] ]
         return self.write_cmd(ns_command['trig X'])
 
+
     # set la trigger mask different
     def la_mask_diff(self, param = [0xFF]):
         ns_command['trig mask diff'][-1] = param[0]
         return self.write_cmd(ns_command['trig mask diff'])
+
 
     # set la trigger mask condition
     def la_mask_cond(self, param = [0xFF]):
         ns_command['trig mask cond'][-1] = param[0]
         return self.write_cmd(ns_command['trig mask cond'])
 
+
     # set sweep divider
     def sweep_div(self, param = ['1uS']):
         ns_command['sweep div'][-1] = ns_sweep_div[param[0]]
         return self.write_cmd(ns_command['sweep div'])
 
+
     # set sweep mode
     def sweep_mode(self, param = ['standart']):
         ns_command['sweep mode'][-1] = ns_sweep_mode[param[0]]
         return self.write_cmd(ns_command['sweep mode'])
+
 
     # data reques from selected channel - 'A', 'B', 'LA'
     def get_data(self, param = ['A', 100, []]):
@@ -296,27 +316,33 @@ class neilscope(object):
             param[2].append(self.write_respond)
         return ws
 
+
     # get batt voltage level in procents
     def get_batt(self, param = [0]):
         ws = self.write_cmd(ns_command['batt'])
         if not ws: param[0] = int(self.write_respond[-1])
         return ws
 
+
     # save eeprom request
     def save_eeprom(self, param = []):
         return self.write_cmd(ns_command['save eeprom'])
+
 
     # jump to bootloader request
     def boot_jump(self, param = []):
         return self.write_cmd(ns_command['bootloader'])
 
+
     # mcu firmware version request
     def get_fw_ver(self, param = [0.0]):
         ws = self.write_cmd(ns_command['mcu fw ver'])
-        if not ws:             
-            param[0] = float(self.write_respond[-1]) / 10.0
+        if not ws:
+            print('%s' % ' '.join(str(r) for r in self.write_respond))
+            param[0] = float(self.write_respond[-1]) / 10
             self.mcu_firm_ver = param[0]            
         return ws
+
 
     # send software ver and id to device
     def send_sw_ver(self, param = [1.0, 0x02]):

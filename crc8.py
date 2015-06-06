@@ -47,10 +47,13 @@ from ctypes.wintypes import *
 #             runningCRC = self.crcByte(runningCRC, c)
 #         return runningCRC
  
-    
+ 
+# calc crc for single byte and old(init) crc value 
 def ns_crc_byte(byte, crc):
+    
     for j in range(8):
-        crc_msb = crc & 0x80            
+        
+        crc_msb = crc & 0x80       
         crc = (crc << 1) & 0xFF
         
         if (byte & 0x80): crc |= 0x01              

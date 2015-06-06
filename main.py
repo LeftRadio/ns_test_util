@@ -17,6 +17,8 @@ class ns_utility(QMainWindow):
 
     log_signal = QtCore.pyqtSignal(str, str)
     test_progress_signal = QtCore.pyqtSignal(int)
+
+    
     device_ready_signal = QtCore.pyqtSignal(bool)
 
 	# constructor
@@ -41,8 +43,8 @@ class ns_utility(QMainWindow):
         self.log_signal.connect(self.qlog_message)
 
         # neiscope device object
-        self.ns3 = neilscope()
-        
+        self.ns3 = neilscope()        
+
         # thread for comunicate neilscope device
         t = threading.Thread(target = self.ns_test_worker)
         t.daemon = True  # thread dies when main thread exits.
@@ -239,7 +241,7 @@ class ns_utility(QMainWindow):
         sb = txbr.verticalScrollBar()
         sb.setValue(sb.maximum())
         txbr.repaint()
-
+    
 
     # logging check_box slot
     @QtCore.pyqtSlot(bool)
@@ -255,12 +257,13 @@ class ns_utility(QMainWindow):
         
         if chck: s_log(self.log_signal.emit)
         else: s_log()
-
+    
 
     # EXIT button click
     @QtCore.pyqtSlot()
     def CloseButtonClicked(self):
         self.close()
+    
 
     		
 
