@@ -91,7 +91,7 @@ ns_cmd = {
     'trig mask cond':   [0x21, 0x01, 0xFF],
     'sweep div':        [0x25, 0x01, 0x00],
     'sweep mode':       [0x27, 0x01, 0x00],
-    'get data':         [0x30, 0x03, 0x00, 0x00, 0x00],
+    'get data':         [0x30, 0x04, 0x00, 0x00, 0x00, 0x00],
     'batt':             [0xA0, 0x01, 0xA0],
     'save eeprom':      [0xEE, 0x01, 0xEE],
     'bootloader':       [0xB0, 0x01, 0x0B],
@@ -109,17 +109,11 @@ class NS3_Commander(object):
     def nlg(msg, err): pass
 
     def __init__(self):
-        # constructor
-        # self.ns_usbxpr = NS_SiUSBXp()
-        # self.ns_telnet = NS_Telnet()
         self.ns_interface = None
-
         self.vidpid = [0,0]
-
         self.connected = 0
         self.mcu_firm_ver = 0.0
         self.write_respond = []
-
 
     def set_log(self, log):
         if log is not None:
@@ -189,11 +183,10 @@ class NS3_Commander(object):
                     self.lg('cmd ack recived')
                     return 0
                 else:
-                    if rd[0] > 3: rd[0] = 0x7F  # if returned error code not recognize replace to 'NS3_ERROR'
-                    err_msg = 'error code: %s' % ns_err_list[rd[0]]
+                    err_msg = 'cmd ack error'
 
             else:
-                err_msg = 'cmd ack error'
+                err_msg = 'cmd read or ack error'
 
         else:
             err_msg = 'write cmd error'
@@ -212,7 +205,7 @@ class NS3_Commander(object):
             self.lg('device found')
 
             # NeilScope device identified OK, try open, set si_settigs and init PC mode
-            if not ( self.interface_config(2000, 2000) | self.write_cmd( ns_cmd['connect'] ) ): #ns_cmd['connect']
+            if not ( self.interface_config(5000, 5000) | self.write_cmd( ns_cmd['connect'] ) ): #ns_cmd['connect']
                   self.lg('connect OK')
                   sleep(0.5)
 
@@ -322,9 +315,14 @@ class NS3_Commander(object):
 
     # data reques from selected channel - 'A', 'B', 'LA'
     def get_data(self, param = ['A', 100, []]):
+
         num = param[1]
-        ns_cmd['get data'][-3:] = [(num>>10)&0xFF, (num>>2)&0xFF, (num<<6)&0xFF]
-        # self.read_data_len = num + 9
+        ns_cmd['get data'][-4:-1] = [(num>>10)&0xFF, (num>>2)&0xFF, (num<<6)&0xFF]
+        if param[0] == 'A':
+            ns_cmd['get data'][-1] = 0x00
+        elif param[0] == 'B':
+            ns_cmd['get data'][-1] = 0x01
+
         ws = self.write_cmd(ns_cmd['get data'], rlen=num+9)
         if not ws:
             param[2][:] = []

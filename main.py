@@ -13,7 +13,7 @@ from ns_commander import NS3_Commander
 from ns_anim import NS_Animate
 
 
-__version__ = 2.2
+__version__ = 2.574
 
 # main window class
 class ns_utility(QMainWindow):
@@ -28,22 +28,15 @@ class ns_utility(QMainWindow):
 
         # Create the queue for threads
         self.nqueue = Queue()
-
         # init user interface
         self.initUI()
 
-        # connect signals
+        # connect signals/slots
         self.closeButton.clicked.connect(self.CloseButtonClicked)
         self.startButton.clicked.connect(self.StartButtonClicked)
-
         self.test_progress_signal.connect(self.test_progress_slot)
         self.device_ready_signal.connect(self.device_ready_slot)
-
-        # self.chckbx_interface.toggled.connect(self.log_chckboxs_changed)
-        # self.nslog_chckbx.toggled.connect(self.log_chckboxs_changed)
         self.log_signal.connect(self.qlog_message)
-
-        # self.combobox_Interface.currentIndexChanged.connect(self.interface_change)
 
         # neiscope device command 'driver' object
         self.ns3 = NS3_Commander()
@@ -53,11 +46,26 @@ class ns_utility(QMainWindow):
         t.daemon = True  # thread dies when main thread exits.
         t.start()
 
+        # start animation
         self.anim.machine.start()
 
         # set window to center and show
         self.center()
         self.show()
+
+        self.start_msg = [
+            'Testing util build ver: %.3f' % __version__,
+            'NeilScope 3',
+            'The full free SW/HW project',
+            'of 100Msps(2-CH) 200Msps(1-CH) digital storage',
+            'Oscilloscope and Logic Analyzer modes',
+            'Contributors:',
+            '---',
+            'Vladislav Kamenev :: LeftRadio',
+            'Ildar :: Muha',
+            '---',
+            'Special thanks to all who supported the project all the time !!!' ]
+        self.nqueue.put('start')
 
     # initialization UI
     def initUI(self):
@@ -76,7 +84,6 @@ class ns_utility(QMainWindow):
 
         # self.anim.start()
         self.anim.window.resize(gr_rect.width(), gr_rect.height())
-        self.anim.window.show()
 
     # set window to center func
     def center(self):
@@ -91,41 +98,22 @@ class ns_utility(QMainWindow):
 
     # device test sequence
     def ns_test_seq(self):
-        # neilscope device test sequence program, [function, [func args], delay sec after, log mesaage]
-        # for single command form is - ns3.connect() ;; ns3.mode('osc') ;;
-        # ns.get_data(['A', 100])
+        # neilscope device test sequence program, [ command function, [func args], delay sec after, log mesaage ]
         ns_test_sequence = [
-            [self.ns3.mode,           'la',
-                0,      'set mode \'LA\'...'],
-            [self.ns3.send_sw_ver,    [1.1, 0x02],
-                0.5,    'send sw ver...'],
-            [self.ns3.mode,           'osc',
-                0,      'set mode \'OSC\'...'],
-            [self.ns3.send_sw_ver,    [1.1, 0x02],
-                0.5,    'send sw ver...'],
-
-            [self.ns3.ach_state,      ['AB', 'dc'],
-                0,      'set ch A/B DC input...'],
-            [self.ns3.ach_div,        ['AB', '50V'],
-                0.05,   'set ch A/B 50V/div...'],
-            [self.ns3.ach_div,        ['AB', '10mV'],
-                0.05,   'set ch A/B 10mV/div...'],
-
-            [self.ns3.sync_mode,      ['off'],
-                0,      'set sync off state...'],
-            [self.ns3.sync_sourse,    ['A'],
-                0,      'set sync sourse to ch A...'],
-            [self.ns3.sync_type,      ['rise'],
-                0,      'set sync type \'rise\'...'],
-            [self.ns3.sweep_div,      ['1uS'],
-                0,      'set sweep 1uS/div...'],
-            [self.ns3.sweep_mode,     ['standart'],
-                0,      'set swep mode \'standart\'...'],
-
-            [self.ns3.get_data,       ['A', 50, []],
-                0,      'get ch A 50 bytes data...'],
-            [self.ns3.get_data,       ['B', 50, []],
-                0,      'get ch B 50 bytes data...'],
+            {'cmd': self.ns3.mode, 'data': 'la', 'delay': 0, 'msg': 'set mode \'LA\'...'},
+            {'cmd': self.ns3.send_sw_ver, 'data': [1.1, 0x02], 'delay': 0.5, 'msg': 'send sw ver...'},
+            {'cmd': self.ns3.mode, 'data': 'osc', 'delay': 0, 'msg': 'set mode \'OSC\'...'},
+            {'cmd': self.ns3.send_sw_ver, 'data': [1.1, 0x02], 'delay': 0.5, 'msg': 'send sw ver...'},
+            {'cmd': self.ns3.ach_state, 'data': ['AB', 'dc'], 'delay': 0, 'msg': 'set ch A/B DC input...'},
+            {'cmd': self.ns3.ach_div, 'data': ['AB', '50V'], 'delay': 0.05, 'msg': 'set ch A/B 50V/div...'},
+            {'cmd': self.ns3.ach_div, 'data': ['AB', '50mV'], 'delay': 0.05, 'msg': 'set ch A/B 50mV/div...'},
+            {'cmd': self.ns3.sync_mode, 'data': ['off'], 'delay': 0, 'msg': 'set sync off state...'},
+            {'cmd': self.ns3.sync_sourse, 'data': ['A'], 'delay': 0, 'msg': 'set sync sourse to ch A...'},
+            {'cmd': self.ns3.sync_type, 'data': ['rise'], 'delay': 0, 'msg': 'set sync type \'rise\'...'},
+            {'cmd': self.ns3.sweep_div, 'data': ['1uS'], 'delay': 0, 'msg': 'set sweep 1uS/div...'},
+            {'cmd': self.ns3.sweep_mode, 'data': ['standart'], 'delay': 0, 'msg': 'set swep mode \'standart\'...'},
+            {'cmd': self.ns3.get_data, 'data': ['A', 100, []], 'delay': 0, 'msg': 'get ch A 100 bytes data...'},
+            {'cmd': self.ns3.get_data, 'data': ['B', 100, []], 'delay': 0, 'msg': 'get ch B 100 bytes data...'},
         ]
 
         progr_one_step = 100 / len(ns_test_sequence)
@@ -133,12 +121,13 @@ class ns_utility(QMainWindow):
 
         self.log('start test sequence')
         for cn in ns_test_sequence:
-            self.log(cn[-1])
+            self.log(cn['msg'])
             # send sequense command
-            cmd_result = cn[0](cn[1])
+            cmd_result = cn['cmd']( cn['data'] )
+            # result
             if not cmd_result:
                 self.log('SUCCESS\r\n')
-                sleep(cn[2] + 0.1)
+                sleep(cn['delay'])
                 progr = progr + progr_one_step
                 self.test_progress_signal.emit(progr)   # emit progress signal
             else:
@@ -211,6 +200,11 @@ class ns_utility(QMainWindow):
         while True:
             item = self.nqueue.get()
             with threading.Lock():
+                if item == 'start':
+                    import random
+                    for m in self.start_msg:
+                        self.log_signal.emit(m, '')
+                        sleep(random.uniform(0.15, 0.3))
                 if item == 'test':
                     self.ns_test_main()
                     sleep(0.5)
@@ -256,7 +250,7 @@ class ns_utility(QMainWindow):
 
     # QtSlot for log masagges
     @pyqtSlot(str, str)
-    def qlog_message(self, msg, lvl='inf'):
+    def qlog_message(self, msg, lvl=''):
         txbr = self.textBrowser
         qqolor = QtGui.QColor.fromRgb
 
@@ -268,8 +262,10 @@ class ns_utility(QMainWindow):
             txbr.setTextColor(qqolor(255, 255, 255))
         elif lvl == 'end':
             txbr.setTextColor(qqolor(170, 255, 0))
-        else:
+        elif lvl == 'inf':
             txbr.setTextColor(qqolor(119, 255, 176))
+        else:
+            txbr.setTextColor(qqolor(212, 224, 212))
 
         txbr.insertPlainText(
             '%s: %s \r\n' % (str(datetime.utcnow()).split()[1], msg))
